@@ -1,0 +1,8 @@
+*.log
+*.class
+
+.ensime_cache
+.idea
+.vertx
+.ensime
+.vscode
