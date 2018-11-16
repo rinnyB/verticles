@@ -19,14 +19,28 @@ object vert {
   def main(args: Array[String]): Unit = {
 
   implicit val ec = ExecutionContext.global
-    val opts = VertxOptions().setWorkerPoolSize(40)
+    val opts = VertxOptions().setWorkerPoolSize(5)
     val vertx = Vertx.vertx(opts)
+
+    val data = vertx
+      .sharedData()
+      .getLocalMap[String, String]("kafkaConfig")
+    
+    data.put("bootstrap.servers", "localhost:9092")
+    data.put("key.deserializer" , "org.apache.kafka.common.serialization.StringDeserializer")
+    data.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
+    data.put("group.id", "my_group")
+    data.put("auto.offset.reset", "latest")
+    data.put("enable.auto.commit", "false")
     
     val kafkaDeployment = vertx.deployVerticleFuture(
       s"scala:${classOf[KafkaVerticle].getName}", 
-      DeploymentOptions().setWorker(true).setInstances(1))
-    val clientDeployment = vertx.deployVerticleFuture(s"scala:${classOf[ClientVerticle].getName}", 
-      DeploymentOptions().setWorker(true).setInstances(4))
+      DeploymentOptions().setWorker(true).setInstances(1)
+    )
+    val clientDeployment = vertx.deployVerticleFuture(
+      s"scala:${classOf[ClientVerticle].getName}", 
+      DeploymentOptions().setWorker(true).setInstances(4)
+    )
 
     clientDeployment.onComplete {
       case Success(re) => println(s"$re is up and running!")

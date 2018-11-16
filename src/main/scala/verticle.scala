@@ -1,10 +1,14 @@
 package verticles
 
 import scala.concurrent.{Future, Promise}
+import scala.util.{Success, Failure}
 
 import io.vertx.lang.scala.ScalaVerticle
+import io.vertx.lang.scala.json.JsonObject
 import io.vertx.scala.core.eventbus.Message
 import io.vertx.scala.kafka.client.consumer.{KafkaConsumer, KafkaConsumerRecord}
+import io.vertx.scala.ext.web.client.{WebClient, WebClientOptions}
+
 
 import scala.collection.mutable.{Map => MMap}
 
@@ -14,8 +18,17 @@ class ClientVerticle extends ScalaVerticle {
 
   override def startFuture(): Future[Unit] = {
     println(s"Starting Client $name")
+    val clientOptions = WebClientOptions()
+      .setUserAgent(name)
+      .setTrustAll(true)
+    val client = WebClient.create(vertx, clientOptions)
     val consumer = vertx.eventBus().consumer[Event]("topix")
-    consumer.handler({e => println(s"name: $name"); println(e.body()); e.reply("DANK")})
+    consumer.handler(
+      {
+        e => client.postAbs("https://localhost:6000/").ssl(true)
+          .sendJsonObjectFuture(new JsonObject("""{"h":"x"}"""))
+      }
+    )
     Future.successful(())    
   }
 
@@ -31,26 +44,30 @@ class KafkaVerticle extends ScalaVerticle {
 
   override def startFuture(): Future[Unit] = {
 
-  println("Starting Kafka Verticle $name")
-
+  println(s"Starting Kafka Verticle $name")
+  
+  val data = vertx
+    .sharedData()
+    .getLocalMap[String, String]("kafkaConfig")
   val config: MMap[String, String] = MMap(
-    ("bootstrap.servers" -> "localhost:9092"), 
-    ("key.deserializer" -> "org.apache.kafka.common.serialization.StringDeserializer"),
-    ("value.deserializer" -> "org.apache.kafka.common.serialization.StringDeserializer"),
-    ("group.id" -> "my_group"),
-    ("auto.offset.reset" -> "latest"),
-    ("enable.auto.commit" -> "false")
+    ("bootstrap.servers", data.get("bootstrap.servers")),
+    ("key.deserializer", data.get("key.deserializer")),
+    ("value.deserializer", data.get("value.deserializer")),
+    ("group.id", data.get("group.id")),
+    ("auto.offset.reset", data.get("auto.offset.reset")),
+    ("enable.auto.commit", data.get("enable.auto.commit"))
   )
+
   val consumer = KafkaConsumer.create[String, String](vertx, config)
   consumer.subscribe("OUT")
 
   consumer.handler({ 
-      record => vertx.eventBus().sendFuture[Event]("topix", Event(record.key, record.value))
+    record => vertx.eventBus().sendFuture[Event]("topix", Event(record.key, record.value))
   })
     Future.successful(())
   }
 
-    override def stopFuture(): Future[Unit] = {
+  override def stopFuture(): Future[Unit] = {
     println("Stopping Kafka Verticle")
     Future.successful(())
   }
