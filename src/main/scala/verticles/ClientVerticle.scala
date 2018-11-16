@@ -6,10 +6,8 @@ import scala.util.{Success, Failure}
 import io.vertx.lang.scala.ScalaVerticle
 import io.vertx.lang.scala.json.JsonObject
 import io.vertx.scala.core.eventbus.Message
-import io.vertx.scala.kafka.client.consumer.{KafkaConsumer, KafkaConsumerRecord}
 import io.vertx.scala.ext.web.client.{WebClient, WebClientOptions}
 
-import scala.collection.mutable.{Map => MMap}
 
 class ClientVerticle extends ScalaVerticle {
 
@@ -24,11 +22,15 @@ class ClientVerticle extends ScalaVerticle {
     val consumer = vertx.eventBus().consumer[Event]("topix")
     consumer.handler(
       {
-        e => client.postAbs("https://localhost:6000/").ssl(true)
-          .sendJsonObjectFuture(new JsonObject("""{"h":"x"}"""))
+        event => client
+          .postAbs("https://localhost:6000/")
+          .ssl(true)
+          .sendJsonObjectFuture {
+            new JsonObject().put("key", event.body.key).put("value", event.body.value)
+          }
       }
     )
-    Future.successful(())    
+    Future.successful(())
   }
 
   override def stopFuture(): Future[Unit] = {

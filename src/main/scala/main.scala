@@ -11,9 +11,6 @@ import scala.concurrent.{ExecutionContext, Await}
 import scala.concurrent.duration._
 import scala.util.{Success, Failure}
 
-
-import codecs.EventCodec
-
 object vert {
 
   def main(args: Array[String]): Unit = {
