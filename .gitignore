@@ -6,3 +6,6 @@
 .vertx
 .ensime
 .vscode
+
+project/*/*
+target/*
