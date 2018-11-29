@@ -19,29 +19,32 @@ class KafkaVerticle extends ScalaVerticle {
     println(s"Starting Kafka Verticle $name")
     
     val data = vertx
-        .sharedData()
-        .getLocalMap[String, String]("kafkaConfig")
-
+      .sharedData()
+      .getLocalMap[String, String]("kafkaConfig")
     val config: MMap[String, String] = MMap(
-        ("bootstrap.servers", data.get("bootstrap.servers")),
-        ("key.deserializer", data.get("key.deserializer")),
-        ("value.deserializer", data.get("value.deserializer")),
-        ("group.id", data.get("group.id")),
-        ("auto.offset.reset", data.get("auto.offset.reset")),
-        ("enable.auto.commit", data.get("enable.auto.commit"))
+      ("bootstrap.servers", data.get("bootstrap.servers")),
+      ("key.deserializer", data.get("key.deserializer")),
+      ("value.deserializer", data.get("value.deserializer")),
+      ("group.id", data.get("group.id")),
+      ("auto.offset.reset", data.get("auto.offset.reset")),
+      ("enable.auto.commit", data.get("enable.auto.commit"))
     )
 
     val consumer = KafkaConsumer.create[String, String](vertx, config)
     consumer.subscribe("OUT")
 
     consumer.handler(
-        {record => vertx.eventBus().sendFuture[Event]("topix", Event(record.key, record.value))}
+      {
+        record => vertx
+          .eventBus()
+          .sendFuture[Event]("topix", Event(record.key, record.value))
+      }
     )
-        Future.successful(())
+      Future.successful(())
   }
 
   override def stopFuture(): Future[Unit] = {
-    println("Stopping Kafka Verticle")
+    println(s"Stopping Kafka Verticle $name")    
     Future.successful(())
   }
 }

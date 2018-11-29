@@ -14,7 +14,7 @@ class ClientVerticle extends ScalaVerticle {
   val name: String = "Verticle" + this.toString.split('@')(1)
 
   override def startFuture(): Future[Unit] = {
-    println(s"Starting Client $name")
+    println(s"Starting Client Verticle $name")
     val clientOptions = WebClientOptions()
       .setUserAgent(name)
       .setTrustAll(true)
@@ -34,7 +34,7 @@ class ClientVerticle extends ScalaVerticle {
   }
 
   override def stopFuture(): Future[Unit] = {
-    println("Stopping")
+    println(s"Stopping Client Verticle $name")    
     Future.successful(())
   }
 }
