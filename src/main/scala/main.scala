@@ -1,23 +1,42 @@
 package verticles
 
+import scala.concurrent.{ExecutionContext, Await}
+import scala.concurrent.duration._
+import scala.util.{Success, Failure}
+
 import io.vertx.scala.core.Vertx
 import io.vertx.scala.core.VertxOptions
 import io.vertx.scala.core.DeploymentOptions
 import io.vertx.scala.core.eventbus.{Message, DeliveryOptions}
+
+import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.{Vertx => JVertx}
 import io.vertx.core.eventbus.{EventBus => JEventBus}
 import io.vertx.core.json.Json
+import io.vertx.micrometer.VertxPrometheusOptions
+import io.vertx.micrometer.MicrometerMetricsOptions
 
-import scala.concurrent.{ExecutionContext, Await}
-import scala.concurrent.duration._
-import scala.util.{Success, Failure}
+
 
 object vert {
 
   def main(args: Array[String]): Unit = {
 
-  implicit val ec = ExecutionContext.global
-    val opts = VertxOptions().setWorkerPoolSize(5)
-    val vertx = Vertx.vertx(opts)
+    implicit val ec = ExecutionContext.global
+  
+    val options: MicrometerMetricsOptions = new MicrometerMetricsOptions()
+      .setPrometheusOptions(new VertxPrometheusOptions()
+        .setStartEmbeddedServer(true)
+        .setEmbeddedServerOptions(new HttpServerOptions().setPort(8081))
+        .setEnabled(true)
+      ).setEnabled(true)
+
+    val opts = VertxOptions().asJava
+      .setMetricsOptions(options)
+      .setWorkerPoolSize(5)
+
+    val jvertx = JVertx.vertx(opts)
+    val vertx = Vertx(jvertx)
 
     val data = vertx
       .sharedData()
