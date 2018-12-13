@@ -9,6 +9,8 @@ import io.vertx.lang.scala.json.JsonObject
 import io.vertx.scala.core.eventbus.Message
 import io.vertx.scala.kafka.client.consumer.{KafkaConsumer, KafkaConsumerRecord}
 
+import io.vertx.micrometer.backends.BackendRegistries
+
 
 class KafkaVerticle extends ScalaVerticle {
 
@@ -17,6 +19,9 @@ class KafkaVerticle extends ScalaVerticle {
   override def startFuture(): Future[Unit] = {
 
     println(s"Starting Kafka Verticle $name")
+    
+    val registry = BackendRegistries.getDefaultNow();
+    val receivedRecordsCounter = registry.counter("recv")
     
     val data = vertx
       .sharedData()
@@ -35,8 +40,9 @@ class KafkaVerticle extends ScalaVerticle {
 
     consumer.handler(
       {
-        record => vertx
-          .eventBus()
+        record => 
+        receivedRecordsCounter.increment();
+        vertx.eventBus()
           .sendFuture[Event]("topix", Event(record.key, record.value))
       }
     )

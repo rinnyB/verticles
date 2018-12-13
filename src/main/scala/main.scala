@@ -13,8 +13,13 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.core.{Vertx => JVertx}
 import io.vertx.core.eventbus.{EventBus => JEventBus}
 import io.vertx.core.json.Json
-import io.vertx.micrometer.VertxPrometheusOptions
+
+import io.vertx.micrometer.backends.BackendRegistries
 import io.vertx.micrometer.MicrometerMetricsOptions
+import io.vertx.micrometer.PrometheusScrapingHandler
+import io.vertx.micrometer.VertxPrometheusOptions
+
+import io.micrometer.core.instrument.{MeterRegistry, Counter}
 
 
 
@@ -37,6 +42,12 @@ object vert {
 
     val jvertx = JVertx.vertx(opts)
     val vertx = Vertx(jvertx)
+
+    val registry = BackendRegistries.getDefaultNow();
+
+    Counter.builder("recv").description("Messages received by Kafka Consumer").register(registry)
+    Counter.builder("sentBad").description("Messages not sent by WebClient(s)").register(registry)
+    Counter.builder("sentGood").description("Messages sent by WebClient(s)").register(registry)
 
     val data = vertx
       .sharedData()
@@ -71,7 +82,10 @@ object vert {
 
     vertx.eventBus
       .asJava.asInstanceOf[JEventBus]
-      .registerDefaultCodec(classOf[Event], codec)    
+      .registerDefaultCodec(classOf[Event], codec)
+    
+
+
 
     sys.ShutdownHookThread {
       vertx.close()
